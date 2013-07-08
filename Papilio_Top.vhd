@@ -151,6 +151,13 @@ architecture datapath of Papilio_Top is
   signal TRACK_RAM_WE : std_logic;
 
   signal CS_N, MOSI, MISO, SCLK : std_logic;
+  
+  type bram_type is array (0 to 4095) of unsigned(7 downto 0);
+  signal BRAM : bram_type;
+  
+  signal BRAM_WE : std_logic;
+  signal BRAM_DQ : unsigned(7 downto 0);
+  signal BRAM_ADDR : unsigned(15 downto 0);
 
 begin
 
@@ -160,6 +167,20 @@ begin
     if rising_edge(CLK_14M) then
       flash_clk <= flash_clk + 1;
     end if;     
+  end process;
+  
+  bram_4k : process (CLK_14M)
+  variable address_4k : integer;
+  begin
+	 address_4k := to_integer(unsigned(BRAM_ADDR(11 downto 0)));
+    if rising_edge(CLK_14M) then
+		if BRAM_WE = '1' then
+			BRAM(address_4k) <= D;
+		end if;
+		
+		BRAM_DQ <= BRAM(address_4k);
+		
+	 end if;
   end process;
 
 
@@ -180,9 +201,9 @@ begin
     FLASH_CLK      => flash_clk(22),
     RESET          => RESET,
     ADDR           => ADDR,
-    ram_addr       => SRAM_ADDR(15 downto 0),
+    ram_addr       => BRAM_ADDR(15 downto 0),
     D              => D,
-    ram_do         => SRAM_DQ(7 downto 0),
+    ram_do         => BRAM_DQ(7 downto 0),
     PD             => PD,
     ram_we         => ram_we,
     VIDEO          => VIDEO,
@@ -192,12 +213,12 @@ begin
     LD194          => LD194,
     K              => K,
     read_key       => read_key,
-    AN             => LEDR(3 downto 0),
+--    AN             => LEDR(3 downto 0),
     GAMEPORT       => GAMEPORT,
     IO_SELECT      => IO_SELECT,
     DEVICE_SELECT  => DEVICE_SELECT,
-    pcDebugOut     => cpu_pc,
-    speaker        => LEDG(0)
+    pcDebugOut     => cpu_pc
+--    speaker        => LEDG(0)
     );
 
 --  vga : entity work.vga_controller port map (
