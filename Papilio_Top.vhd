@@ -50,16 +50,16 @@ entity Papilio_Top is
     -- Taken from Hamster SD-RAM Controller:
 	 
    -- Signals to/from the SDRAM chip
-   DRAM_ADDR   : OUT   STD_LOGIC_VECTOR (12 downto 0);
-   DRAM_BA      : OUT   STD_LOGIC_VECTOR (1 downto 0);
-   DRAM_CAS_N   : OUT   STD_LOGIC;
-   DRAM_CKE      : OUT   STD_LOGIC;
-   DRAM_CLK      : OUT   STD_LOGIC;
-   DRAM_CS_N   : OUT   STD_LOGIC;
-   DRAM_DQ      : INOUT STD_LOGIC_VECTOR(15 downto 0);
-   DRAM_DQM      : OUT   STD_LOGIC_VECTOR(1 downto 0);
-   DRAM_RAS_N   : OUT   STD_LOGIC;
-   DRAM_WE_N    : OUT   STD_LOGIC;
+--   DRAM_ADDR   : OUT   STD_LOGIC_VECTOR (12 downto 0);
+--   DRAM_BA      : OUT   STD_LOGIC_VECTOR (1 downto 0);
+--   DRAM_CAS_N   : OUT   STD_LOGIC;
+--   DRAM_CKE      : OUT   STD_LOGIC;
+--   DRAM_CLK      : OUT   STD_LOGIC;
+--   DRAM_CS_N   : OUT   STD_LOGIC;
+--   DRAM_DQ      : INOUT STD_LOGIC_VECTOR(15 downto 0);
+--   DRAM_DQM      : OUT   STD_LOGIC_VECTOR(1 downto 0);
+--   DRAM_RAS_N   : OUT   STD_LOGIC;
+--   DRAM_WE_N    : OUT   STD_LOGIC;
 
     -- FLASH
     
@@ -96,21 +96,21 @@ entity Papilio_Top is
 
     -- PS/2 ports A and B
 
-    PS2A_DAT,                    -- Data
-    PS2A_CLK : in std_logic;     -- Clock
-    PS2B_DAT,                    -- Data
-    PS2B_CLK : in std_logic;     -- Clock
+    PS2DATA,                    -- Data
+    PS2CLKA : in std_logic;     -- Clock
+    PS2DATB,                    -- Data
+    PS2CLKB : in std_logic;     -- Clock
 
     -- VGA output
     
 --    VGA_CLK,                                            -- Clock
     VGA_HS,                                             -- H_SYNC
-    VGA_VS,                                             -- V_SYNC
---    VGA_BLANK,                                          -- BLANK
+    VGA_VS : out std_logic;                             -- V_SYNC
+--    VGA_BLANK,                                        -- BLANK
     VGA_SYNC : out std_logic;                           -- SYNC
-    VGA_R : out unsigned(2 downto 0);                   -- Red[2:0]
-    VGA_G : out unsigned(2 downto 0);                   -- Green[2:0]
-    VGA_B : out unsigned(1 downto 0);                   -- Blue[1:0]
+    VGA_R : out unsigned(3 downto 0);                   -- Red[2:0]
+    VGA_G : out unsigned(3 downto 0);                   -- Green[2:0]
+    VGA_B : out unsigned(3 downto 0);                   -- Blue[1:0]
 
     
     -- Audio Output
@@ -128,8 +128,8 @@ architecture datapath of Papilio_Top is
   signal IO_SELECT, DEVICE_SELECT : std_logic_vector(7 downto 0);
   signal ADDR : unsigned(15 downto 0);
   signal D, PD : unsigned(7 downto 0);
-
-  signal ram_we : std_logic;
+--
+--  signal ram_we : std_logic;
   signal VIDEO, HBL, VBL, LD194 : std_logic;
   signal COLOR_LINE : std_logic;
   signal COLOR_LINE_CONTROL : std_logic;
@@ -161,6 +161,8 @@ architecture datapath of Papilio_Top is
 
 begin
 
+	
+
   -- In the Apple ][, this was a 555 timer
   flash_clkgen : process (CLK_14M)
   begin
@@ -172,25 +174,24 @@ begin
   bram_4k : process (CLK_14M)
   variable address_4k : integer;
   begin
-	 address_4k := to_integer(unsigned(BRAM_ADDR(11 downto 0)));
     if rising_edge(CLK_14M) then
+		address_4k := to_integer(unsigned(BRAM_ADDR(11 downto 0)));
+		BRAM_DQ <= BRAM(address_4k);
+		
 		if BRAM_WE = '1' then
 			BRAM(address_4k) <= D;
 		end if;
-		
-		BRAM_DQ <= BRAM(address_4k);
-		
-	 end if;
+	end if;
   end process;
 
 
---  pll : entity work.kbd_intf port map (
---    clk_in1   => CLOCK_50,
---    clk_out1  => CLK_14M
---    );
+  pll : entity work.clock_14mhz port map (
+    clk_in1   => CLOCK_50,
+    clk_out1  => CLK_14M
+    );
 
   -- Paddle buttons
-  GAMEPORT <=  "0000" & (not KEY(3 downto 0)) & "0";
+  GAMEPORT <=  "0000" & (not KEY(3 downto 0));
 
   --COLOR_LINE_CONTROL <= COLOR_LINE and SW(17);  -- Color or B&W mode
   
@@ -205,7 +206,7 @@ begin
     D              => D,
     ram_do         => BRAM_DQ(7 downto 0),
     PD             => PD,
-    ram_we         => ram_we,
+    ram_we         => BRAM_WE,
     VIDEO          => VIDEO,
     COLOR_LINE     => COLOR_LINE,
     HBL            => HBL,
@@ -220,28 +221,33 @@ begin
     pcDebugOut     => cpu_pc
 --    speaker        => LEDG(0)
     );
+	 
+	 
 
---  vga : entity work.vga_controller port map (
---    CLK_14M    => CLK_14M,
---    VIDEO      => VIDEO,
---    COLOR_LINE => COLOR_LINE_CONTROL,
---    HBL        => HBL,
---    VBL        => VBL,
---    LD194      => LD194,
+  vga : entity work.vga_controller port map (
+    CLK_14M    => CLK_14M,
+    VIDEO      => VIDEO,
+    COLOR_LINE => COLOR_LINE_CONTROL,
+    HBL        => HBL,
+    VBL        => VBL,
+    LD194      => LD194,
 --    VGA_CLK    => VGA_CLK,
---    VGA_HS     => VGA_HS,
---    VGA_VS     => VGA_VS,
+    VGA_HS     => VGA_HS,
+    VGA_VS     => VGA_VS,
 --    VGA_BLANK  => VGA_BLANK,
---    VGA_R      => VGA_R,
---    VGA_G      => VGA_G,
---    VGA_B      => VGA_B
---    );
---
---  VGA_SYNC <= '0';
+    VGA_R(9 downto 6)      => VGA_R,
+	 VGA_R(5 downto 0) => open,
+    VGA_G(9 downto 6)      => VGA_G,
+	 VGA_G(5 downto 0) => open,
+    VGA_B(9 downto 6)      => VGA_B,	 
+	 VGA_B(5 downto 0) => open
+    );
+
+  VGA_SYNC <= '0';
 
   keyboard : entity work.kbd_intf port map (
-    PS2_Clk  => PS2A_CLK,
-    PS2_Data => PS2A_DAT,
+    PS2_Clk  => PS2CLKA,
+    PS2_Data => PS2DATA,
     CLK_14M  => CLK_14M,
     RESET    => RESET,
     read_kb  => read_key,
