@@ -110,13 +110,13 @@ entity Papilio_Top is
     VGA_SYNC : out std_logic;                           -- SYNC
     VGA_R : out unsigned(3 downto 0);                   -- Red[2:0]
     VGA_G : out unsigned(3 downto 0);                   -- Green[2:0]
-    VGA_B : out unsigned(3 downto 0);                   -- Blue[1:0]
+    VGA_B : out unsigned(3 downto 0)                   -- Blue[1:0]
 
     
     -- Audio Output
     
-	 AUDIO_L,
-    AUDIO_R : out std_logic                          -- RESET
+--	 AUDIO_L,
+--    AUDIO_R : out std_logic                          -- RESET
     
     );
   
@@ -152,7 +152,7 @@ architecture datapath of Papilio_Top is
 
   signal CS_N, MOSI, MISO, SCLK : std_logic;
   
-  type bram_type is array (0 to 4095) of unsigned(7 downto 0);
+  type bram_type is array (0 to 65535) of unsigned(7 downto 0);
   signal BRAM : bram_type;
   
   signal BRAM_WE : std_logic;
@@ -171,15 +171,15 @@ begin
     end if;     
   end process;
   
-  bram_4k : process (CLK_14M)
-  variable address_4k : integer;
+  bram_64k : process (CLK_14M)
+  variable address_64k : integer;
   begin
     if rising_edge(CLK_14M) then
-		address_4k := to_integer(unsigned(BRAM_ADDR(11 downto 0)));
-		BRAM_DQ <= BRAM(address_4k);
+		address_64k := to_integer(unsigned(BRAM_ADDR(15 downto 0)));
+		BRAM_DQ <= BRAM(address_64k);
 		
 		if BRAM_WE = '1' then
-			BRAM(address_4k) <= D;
+			BRAM(address_64k) <= D;
 		end if;
 	end if;
   end process;
